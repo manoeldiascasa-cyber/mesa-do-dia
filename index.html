@@ -1,0 +1,629 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+<meta name="theme-color" content="#0B5F73">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Mesa do Dia">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon.png">
+<link rel="icon" href="icon.png">
+<title>Mesa do Dia</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..800&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: mesa de operação em coluna única. Mini índice no topo com escada de níveis, depois o ranking das 10 ações em linhas separadas por filetes, sem cartões. */
+:root {
+  --bg: #ECEFF1;
+  --panel: #F7F8F9;
+  --ink: #101A24;
+  --muted: #566573;
+  --line: #CBD3D9;
+  --accent: #0B5F73;
+  --up: #11764A;
+  --down: #B3261E;
+  --warn: #9A5B08;
+  --display: "Archivo", "Helvetica Neue", Arial, sans-serif;
+  --body: "Archivo", "Helvetica Neue", Arial, sans-serif;
+  --mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0E1419; --panel: #151D24; --ink: #E6ECF0; --muted: #8E9CA8; --line: #26323C;
+    --accent: #5CC3D9; --up: #4CC38A; --down: #F0766D; --warn: #E0A04A; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0E1419; --panel: #151D24; --ink: #E6ECF0; --muted: #8E9CA8; --line: #26323C;
+  --accent: #5CC3D9; --up: #4CC38A; --down: #F0766D; --warn: #E0A04A; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+[hidden] { display: none !important; }
+body {
+  margin: 0; background: var(--bg); color: var(--ink); font-family: var(--body); font-size: 15px; line-height: 1.5;
+  padding-top: max(20px, env(safe-area-inset-top, 0px));
+  padding-bottom: max(56px, env(safe-area-inset-bottom, 0px));
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+.app { max-width: 980px; margin: 0 auto; display: flex; flex-direction: column; gap: 20px; }
+.mono, dd, .num { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+h1, h2, h3 { margin: 0; font-family: var(--display); text-wrap: balance; }
+.top { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-end; gap: 8px 24px; }
+h1 { font-stretch: 125%; font-weight: 800; text-transform: uppercase; letter-spacing: .03em; font-size: clamp(1.6rem, 6vw, 2.3rem); line-height: 1.05; }
+.sub { color: var(--muted); font-size: .85rem; margin-top: 4px; }
+.meta { text-align: right; font-size: .85rem; color: var(--muted); min-width: 0; }
+.meta b { color: var(--ink); font-weight: 600; }
+.tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--line); overflow-x: auto; }
+.tabs button {
+  font: inherit; font-weight: 600; color: var(--muted); background: none; border: 0; border-bottom: 3px solid transparent;
+  padding: 10px 14px; cursor: pointer; white-space: nowrap;
+}
+.tabs button[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--accent); }
+button:focus-visible, input:focus-visible, textarea:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.banner { border: 1px solid var(--warn); color: var(--warn); padding: 10px 12px; border-radius: 4px; font-size: .88rem; }
+.banner.info { border-color: var(--line); color: var(--muted); background: var(--panel); }
+.banner.info b { color: var(--ink); }
+.banner b { font-weight: 700; }
+.banner .btn { margin-top: 8px; }
+.section-title { font-stretch: 112%; font-weight: 700; font-size: 1.05rem; text-transform: uppercase; letter-spacing: .06em; }
+.head-row { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: 6px 16px; }
+.muted { color: var(--muted); }
+.small { font-size: .82rem; }
+.settings { display: flex; flex-wrap: wrap; gap: 12px 20px; align-items: flex-end; }
+label.f { display: flex; flex-direction: column; gap: 4px; font-size: .78rem; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; min-width: 0; }
+input[type="text"], input[type="date"], textarea {
+  font-family: var(--mono); font-size: 16px; color: var(--ink); background: var(--panel); border: 1px solid var(--line);
+  border-radius: 4px; padding: 8px 10px; width: 100%; min-width: 0;
+}
+.settings input { width: 130px; }
+textarea { min-height: 260px; resize: vertical; line-height: 1.45; font-size: 14px; }
+.btn {
+  font: inherit; font-weight: 600; cursor: pointer; border-radius: 4px; padding: 9px 16px; border: 1px solid var(--accent);
+  background: var(--accent); color: var(--bg);
+}
+.btn.ghost { background: none; color: var(--accent); }
+.btn.small { padding: 5px 12px; font-size: .82rem; }
+.btns { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+.seg { display: inline-flex; border: 1px solid var(--accent); border-radius: 4px; overflow: hidden; align-self: flex-start; }
+.seg button { font: inherit; font-weight: 600; background: none; color: var(--accent); border: 0; padding: 8px 16px; cursor: pointer; }
+.seg button[aria-pressed="true"] { background: var(--accent); color: var(--bg); }
+.pill { font-size: .72rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; padding: 2px 8px; border-radius: 3px; border: 1px solid currentColor; white-space: nowrap; }
+.pill.up { color: var(--up); } .pill.down { color: var(--down); } .pill.neutral { color: var(--muted); }
+.hint { font-size: .75rem; color: var(--warn); }
+.win { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); gap: 24px; border-top: 2px solid var(--ink); padding-top: 14px; }
+.scen { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+.scen > div { min-width: 0; }
+.scen h3 { font-size: .95rem; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-bottom: 8px; }
+dl { margin: 0; }
+.kv { display: grid; grid-template-columns: 1fr auto; gap: 2px 10px; font-size: .9rem; }
+.kv dt { color: var(--muted); } .kv dd { margin: 0; text-align: right; }
+.stop { color: var(--down); } .tgt { color: var(--up); }
+.ladder { list-style: none; margin: 0; padding: 0; font-size: .85rem; }
+.ladder li { display: flex; justify-content: space-between; gap: 10px; padding: 3px 6px; border-bottom: 1px dotted var(--line); }
+.ladder li.cur { background: var(--panel); border-bottom: 1px solid var(--accent); font-weight: 600; color: var(--accent); }
+.ladder .d { color: var(--muted); min-width: 64px; text-align: right; }
+.list { display: flex; flex-direction: column; }
+.row { display: grid; grid-template-columns: 200px minmax(0, 1fr); gap: 8px 24px; padding: 14px 0; border-top: 1px solid var(--line); }
+.row:first-child { border-top: 2px solid var(--ink); }
+.rhead { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.who { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.rank { font-family: var(--mono); color: var(--muted); font-size: .85rem; }
+.who h3 { font-stretch: 112%; font-weight: 800; font-size: 1.4rem; letter-spacing: .02em; }
+.score { display: flex; align-items: center; gap: 10px; font-size: .85rem; }
+.meter { flex: 1; height: 6px; background: var(--line); border-radius: 3px; overflow: hidden; max-width: 120px; }
+.meter i { display: block; height: 100%; background: var(--accent); }
+.levels { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
+.levels dt { font-size: .7rem; color: var(--muted); text-transform: uppercase; letter-spacing: .07em; }
+.levels dd { margin: 0; font-size: 1.1rem; font-weight: 600; }
+.line2 { margin-top: 8px; font-size: .82rem; color: var(--muted); }
+.line2 span + span::before { content: " · "; }
+.err { color: var(--down); font-size: .85rem; margin: 6px 0 0; padding-left: 18px; }
+.grid4 { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 12px; }
+table { border-collapse: collapse; width: 100%; font-size: .88rem; }
+th, td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--line); }
+th { color: var(--muted); font-weight: 600; font-size: .75rem; text-transform: uppercase; letter-spacing: .06em; }
+.scroll { overflow-x: auto; }
+.stack { display: flex; flex-direction: column; gap: 14px; }
+code { font-family: var(--mono); font-size: .85em; background: var(--panel); padding: 1px 5px; border-radius: 3px; }
+ol.steps { margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 4px; }
+@media (max-width: 720px) {
+  .win { grid-template-columns: minmax(0, 1fr); }
+  .row { grid-template-columns: minmax(0, 1fr); }
+  .meta { text-align: left; }
+}
+@media (max-width: 520px) {
+  .levels { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .scen { grid-template-columns: minmax(0, 1fr); }
+}
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="top">
+    <div>
+      <h1>Mesa do Dia</h1>
+      <div class="sub">Day trade na B3 · ações e mini índice · cálculo sobre o pregão anterior</div>
+    </div>
+    <div class="meta" id="meta"></div>
+  </header>
+  <nav class="tabs" role="tablist" aria-label="Seções">
+    <button role="tab" data-act="tab" data-tab="painel" id="t-painel">Painel</button>
+    <button role="tab" data-act="tab" data-tab="dados" id="t-dados">Dados</button>
+    <button role="tab" data-act="tab" data-tab="metodo" id="t-metodo">Método</button>
+  </nav>
+  <div id="banner"></div>
+  <main id="view"></main>
+</div>
+
+<script>
+(function () {
+  var KEY = 'mesa-do-dia-v2';
+  var SAMPLE = [
+    'PETR4;38,40;39,05;38,10;38,92;52400000;38000000;0,82',
+    'VALE3;62,10;62,60;61,20;61,35;21800000;17500000;1,15',
+    'ITUB4;36,80;37,20;36,65;37,12;18900000;17000000;0,62',
+    'BBDC4;14,55;14,62;14,30;14,34;24100000;20500000;0,29',
+    'BBAS3;22,40;22,95;22,35;22,88;15300000;9800000;0,55',
+    'ABEV3;12,20;12,28;12,10;12,15;14000000;16000000;0,22',
+    'WEGE3;41,50;42,40;41,30;42,25;6900000;4800000;1,00',
+    'MGLU3;9,10;9,55;9,02;9,48;41200000;22000000;0,45',
+    'PRIO3;47,30;47,60;45,90;46,05;12600000;8900000;1,30',
+    'SUZB3;52,10;52,80;51,90;52,45;5100000;5300000;1,15',
+    'CSNA3;8,40;8,62;8,31;8,58;11700000;7600000;0,30',
+    'JBSS3;33,90;34,20;33,20;33,35;4800000;3100000;0,85'
+  ].join('\n');
+
+  function pad(n) { return String(n).padStart(2, '0'); }
+  function iso(d) { return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()); }
+  function prevBiz(from) {
+    var d = new Date(from.getTime());
+    do { d.setDate(d.getDate() - 1); } while (d.getDay() === 0 || d.getDay() === 6);
+    return d;
+  }
+  function autoContract() {
+    var now = new Date(), m = now.getMonth() + 1, y = now.getFullYear();
+    var cm = m % 2 === 0 ? (now.getDate() <= 14 ? m : m + 2) : m + 1;
+    if (cm > 12) { cm -= 12; y += 1; }
+    var codes = { 2: 'G', 4: 'J', 6: 'M', 8: 'Q', 10: 'V', 12: 'Z' };
+    return 'WIN' + codes[cm] + String(y).slice(2);
+  }
+
+  var defaults = function () {
+    return {
+      tab: 'painel', mode: 'auto', basis: '0', auto: null,
+      stocksText: '', win: { o: '', h: '', l: '', c: '', atr: '', contract: autoContract() },
+      sessDate: iso(prevBiz(new Date())), capital: '50000', risk: '0.5', isSample: false,
+      p: { s: { ke: 0.10, ks: 0.50, k1: 0.75, k2: 1.25 }, w: { ke: 0.10, ks: 0.15, k1: 0.25, k2: 0.45 } },
+      errors: []
+    };
+  };
+  var S = defaults();
+  var runtime = { load: 'loading', msg: '' };
+  try {
+    var raw = localStorage.getItem(KEY);
+    if (raw) {
+      var sv = JSON.parse(raw);
+      for (var k in sv) {
+        if (k === 'win' || k === 'p') continue;
+        S[k] = sv[k];
+      }
+      if (sv.win) Object.assign(S.win, sv.win);
+      if (sv.p) { Object.assign(S.p.s, sv.p.s || {}); Object.assign(S.p.w, sv.p.w || {}); }
+    }
+  } catch (e) {}
+  function save() { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) {} }
+
+  function esc(s) { return String(s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+  function f(n, d) { d = d == null ? 2 : d; return n.toLocaleString('pt-BR', { minimumFractionDigits: d, maximumFractionDigits: d }); }
+  function num(s) {
+    s = String(s == null ? '' : s).trim().replace(/\s|R\$/g, '');
+    if (!s) return NaN;
+    var dots = (s.match(/\./g) || []).length, commas = (s.match(/,/g) || []).length;
+    if (commas && dots) {
+      if (s.lastIndexOf(',') > s.lastIndexOf('.')) s = s.replace(/\./g, '').replace(',', '.');
+      else s = s.replace(/,/g, '');
+    } else if (commas) {
+      s = commas > 1 ? s.replace(/,/g, '') : s.replace(',', '.');
+    } else if (dots > 1) { s = s.replace(/\./g, ''); }
+    return Number(s);
+  }
+  var r2 = function (x) { return Math.round(x * 100) / 100; };
+  var r5 = function (x) { return Math.round(x / 5) * 5; };
+  var clamp = function (x, a, b) { return Math.max(a, Math.min(b, x)); };
+
+  function parseStocks(text) {
+    var rows = [], errors = [];
+    text.split(/\r?\n/).forEach(function (line, i) {
+      if (!line.trim()) return;
+      var sep = /[\t;]/.test(line) ? /[\t;]/ : ',';
+      var c = line.split(sep).map(function (x) { return x.trim(); });
+      if (isNaN(num(c[1])) && rows.length === 0 && errors.length === 0) return;
+      if (c.length < 6) { errors.push('Linha ' + (i + 1) + ': faltam colunas (mínimo 6).'); return; }
+      var r = {
+        t: c[0].toUpperCase().replace(/[^A-Z0-9]/g, ''),
+        o: num(c[1]), h: num(c[2]), l: num(c[3]), cl: num(c[4]), vol: num(c[5]),
+        avg: c[6] ? num(c[6]) : NaN, atr: c[7] ? num(c[7]) : NaN
+      };
+      var ok = r.t && [r.o, r.h, r.l, r.cl].every(function (v) { return isFinite(v) && v > 0; }) && isFinite(r.vol);
+      if (!ok) { errors.push('Linha ' + (i + 1) + ' (' + (c[0] || '?') + '): valores inválidos.'); return; }
+      if (r.h < Math.max(r.o, r.cl, r.l) || r.l > Math.min(r.o, r.cl, r.h)) {
+        errors.push('Linha ' + (i + 1) + ' (' + r.t + '): máxima e mínima não cobrem abertura e fechamento.'); return;
+      }
+      rows.push(r);
+    });
+    return { rows: rows, errors: errors };
+  }
+
+  function volScore(p) {
+    if (p < 1) return p * 0.4;
+    if (p < 1.5) return 0.4 + (p - 1) / 0.5 * 0.6;
+    if (p <= 4) return 1;
+    if (p <= 6) return 1 - (p - 4) / 2 * 0.6;
+    return 0.4;
+  }
+
+  function analyzeStock(r, cap, riskPct) {
+    var P = S.p.s, range = r.h - r.l;
+    var A = (r.atr > 0 ? r.atr : range) || r.cl * 0.02;
+    var atrPct = A / r.cl * 100;
+    var rvol = r.avg > 0 ? r.vol / r.avg : null;
+    var cp = range > 0 ? (r.cl - r.l) / range : 0.5;
+    var body = range > 0 ? Math.abs(r.cl - r.o) / range : 0;
+    var pv = (r.h + r.l + r.cl) / 3;
+    var score = (rvol == null ? 15 : clamp(rvol / 2, 0, 1) * 30) + volScore(atrPct) * 25 + Math.abs(cp - 0.5) * 2 * 25 + body * 20;
+    var up = cp >= 0.5, sg = up ? 1 : -1;
+    var entry = r2(r.cl + sg * P.ke * A);
+    var stop = r2(entry - sg * P.ks * A);
+    var t1 = r2(entry + sg * P.k1 * A), t2 = r2(entry + sg * P.k2 * A);
+    var riskPS = Math.abs(entry - stop);
+    var qty = riskPS > 0 ? Math.floor((cap * riskPct / 100) / riskPS) : 0;
+    return {
+      t: r.t, score: Math.round(score), side: up ? 'C' : 'V', agree: (r.cl >= r.o) === up,
+      entry: entry, stop: stop, t1: t1, t2: t2, riskPS: riskPS, riskPct: riskPS / entry * 100,
+      rr1: P.k1 / P.ks, rr2: P.k2 / P.ks, qty: qty, expo: qty * entry,
+      rvol: rvol, atrPct: atrPct, cp: cp, pv: pv, R1: 2 * pv - r.l, S1: 2 * pv - r.h
+    };
+  }
+
+  function readWin() {
+    var w = S.win, o = num(w.o), h = num(w.h), l = num(w.l), c = num(w.c), atr = num(w.atr);
+    var empty = !w.o && !w.h && !w.l && !w.c;
+    if (empty) return { empty: true };
+    if (![o, h, l, c].every(function (v) { return isFinite(v) && v > 0; }) || h < Math.max(o, c, l) || l > Math.min(o, c, h)) {
+      return { error: 'Mini índice digitado: confira abertura, máxima, mínima e fechamento (a máxima deve ser a maior e a mínima a menor).' };
+    }
+    return { o: o, h: h, l: l, c: c, atr: atr };
+  }
+  function analyzeWin(w, cap, riskPct) {
+    var P = S.p.w, range = w.h - w.l, A = (w.atr > 0 ? w.atr : range) || 1;
+    var pv = (w.h + w.l + w.c) / 3;
+    var lv = { P: r5(pv), R1: r5(2 * pv - w.l), S1: r5(2 * pv - w.h), R2: r5(pv + range), S2: r5(pv - range) };
+    function scen(sg) {
+      var e = r5(w.c + sg * P.ke * A), s = r5(e - sg * P.ks * A), t1 = r5(e + sg * P.k1 * A), t2 = r5(e + sg * P.k2 * A);
+      var sp = Math.abs(e - s);
+      return { e: e, s: s, t1: t1, t2: t2, sp: sp, t1p: Math.abs(t1 - e), t2p: Math.abs(t2 - e),
+        n: sp > 0 ? Math.floor((cap * riskPct / 100) / (sp * 0.2)) : 0 };
+    }
+    return { lv: lv, A: A, bias: w.c >= pv ? 'C' : 'V', buy: scen(1), sell: scen(-1), w: w };
+  }
+
+  function sessionLabel(isoDate) {
+    var d = new Date(isoDate + 'T12:00:00');
+    if (isNaN(d.getTime())) return '—';
+    return d.toLocaleDateString('pt-BR', { weekday: 'short', day: '2-digit', month: '2-digit' }).replace('.', '');
+  }
+  function effSession() { return S.mode === 'auto' && S.auto ? S.auto.session_date : S.sessDate; }
+  function stamp(isoUtc) {
+    var d = new Date(isoUtc);
+    if (isNaN(d.getTime())) return '—';
+    return d.toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+  }
+
+  /* ---------- carregamento dos dados automáticos ---------- */
+  function loadAuto() {
+    runtime.load = 'loading'; runtime.msg = '';
+    return fetch('data.json?ts=' + Date.now(), { cache: 'no-store' })
+      .then(function (r) { if (!r.ok) throw new Error('http ' + r.status); return r.json(); })
+      .then(function (j) {
+        if (!j || !Array.isArray(j.stocks) || !j.session_date) throw new Error('formato');
+        S.auto = j; runtime.load = 'ok'; save();
+      })
+      .catch(function () { runtime.load = S.auto ? 'cached' : 'fail'; })
+      .then(function () { render(); });
+  }
+
+  /* ---------- montagem dos dados do dia ---------- */
+  function build() {
+    var res = { cap: num(S.capital), rk: num(S.risk), rows: [], win: null, winErr: null, winSrc: '', errors: [] };
+    if (S.mode === 'auto') {
+      if (S.auto) {
+        res.rows = (S.auto.stocks || []).map(function (x) {
+          return { t: x.t, o: x.o, h: x.h, l: x.l, cl: x.c, vol: x.v, avg: x.avg == null ? NaN : x.avg, atr: x.atr == null ? NaN : x.atr };
+        });
+        var mw = readWin();
+        if (mw.error) res.winErr = mw.error;
+        if (mw.o) { res.win = mw; res.winSrc = 'números digitados por você'; }
+        else if (S.auto.ibov) {
+          var b = num(S.basis); if (!isFinite(b)) b = 0;
+          var ib = S.auto.ibov;
+          res.win = { o: ib.o + b, h: ib.h + b, l: ib.l + b, c: ib.c + b, atr: ib.atr };
+          res.winSrc = 'Ibovespa ' + (b >= 0 ? '+' : '−') + f(Math.abs(b), 0) + ' pts de ajuste';
+        }
+      }
+    } else {
+      var pr = parseStocks(S.stocksText);
+      res.rows = pr.rows; res.errors = pr.errors;
+      var w = readWin();
+      if (w.error) res.winErr = w.error;
+      else if (w.o) { res.win = w; res.winSrc = 'números digitados por você'; }
+    }
+    return res;
+  }
+  function plan() {
+    var p = build();
+    p.list = p.rows.map(function (r) { return analyzeStock(r, p.cap, p.rk); }).sort(function (a, b) { return b.score - a.score; });
+    p.total = p.rows.length;
+    p.wa = p.win ? analyzeWin(p.win, p.cap, p.rk) : null;
+    if (p.wa) p.wa.src = p.winSrc;
+    return p;
+  }
+
+  function renderMeta() {
+    var today = new Date().toLocaleDateString('pt-BR', { weekday: 'short', day: '2-digit', month: '2-digit' }).replace('.', '');
+    var es = effSession();
+    var stale = es < iso(prevBiz(new Date()));
+    document.getElementById('meta').innerHTML = 'Hoje <b>' + today + '</b><br>Base: pregão de <b>' + sessionLabel(es) + '</b>' +
+      (stale ? '<br><span class="hint">Pregão mais recente que isso pode existir</span>' : '') +
+      (S.mode === 'auto' ? '<br><button class="btn ghost small" data-act="refresh">Atualizar agora</button>' : '');
+  }
+  function renderBanner() {
+    var h = '';
+    if (S.mode === 'auto') {
+      if (S.auto) {
+        var stale = S.auto.session_date < iso(prevBiz(new Date()));
+        if (runtime.load === 'loading') h = '<div class="banner info">Buscando os dados mais recentes…</div>';
+        else if (runtime.load === 'cached') h = '<div class="banner">Sem conexão ou sem acesso ao arquivo de dados. Mostrando os últimos dados salvos neste aparelho, do pregão de <b>' + sessionLabel(S.auto.session_date) + '</b>.</div>';
+        else if (stale) h = '<div class="banner"><b>Dados desatualizados.</b> O último pregão carregado é o de ' + sessionLabel(S.auto.session_date) + '. Pode ter sido feriado; se não foi, confira se o robô está rodando (aba Actions no GitHub).</div>';
+        else h = '<div class="banner info">Dados automáticos do pregão de <b>' + sessionLabel(S.auto.session_date) + '</b>, atualizados em ' + stamp(S.auto.updated_at) + '. Fonte: ' + esc(S.auto.source || 'n/d') + '. Confira os preços no seu home broker antes de operar.</div>';
+      } else if (runtime.load === 'loading') h = '<div class="banner info">Buscando os dados mais recentes…</div>';
+      else h = '<div class="banner"><b>Ainda não há dados automáticos.</b> Se você acabou de configurar o GitHub, rode o robô uma vez (aba Actions, botão Run workflow) e atualize esta página. Enquanto isso, use o modo Manual na aba Dados.</div>';
+    } else if (S.isSample) {
+      h = '<div class="banner"><b>Dados de exemplo.</b> Os preços são fictícios. <button class="btn ghost small" data-act="mode" data-mode="auto">Voltar ao automático</button></div>';
+    } else {
+      h = '<div class="banner info"><b>Modo manual.</b> Usando os dados que você colou na aba Dados. <button class="btn ghost small" data-act="mode" data-mode="auto">Voltar ao automático</button></div>';
+    }
+    document.getElementById('banner').innerHTML = h;
+  }
+
+  function levelsHTML(a) {
+    var d = a.side === 'C';
+    return '<dl class="levels">' +
+      '<div><dt>' + (d ? 'Compra acima de' : 'Venda abaixo de') + '</dt><dd>' + f(a.entry) + '</dd></div>' +
+      '<div><dt>Stop</dt><dd class="stop">' + f(a.stop) + '</dd></div>' +
+      '<div><dt>Alvo 1</dt><dd class="tgt">' + f(a.t1) + '</dd></div>' +
+      '<div><dt>Alvo 2</dt><dd class="tgt">' + f(a.t2) + '</dd></div></dl>';
+  }
+  function rowHTML(a, i) {
+    var d = a.side === 'C';
+    return '<article class="row"><div class="rhead">' +
+      '<div class="who"><span class="rank">' + pad(i + 1) + '</span><h3>' + esc(a.t) + '</h3>' +
+      '<span class="pill ' + (d ? 'up' : 'down') + '">' + (d ? 'Compra' : 'Venda') + '</span>' +
+      (a.agree ? '' : '<span class="hint">viés misto</span>') + '</div>' +
+      '<div class="score" role="img" aria-label="Pontuação ' + a.score + ' de 100"><span class="mono">' + a.score + '</span><span class="meter"><i style="width:' + a.score + '%"></i></span></div>' +
+      '</div><div>' + levelsHTML(a) +
+      '<div class="line2"><span>R:R ' + f(a.rr1, 1) + ' / ' + f(a.rr2, 1) + '</span>' +
+      '<span>risco R$ ' + f(a.riskPS) + ' por ação (' + f(a.riskPct) + '%)</span>' +
+      '<span>' + (a.qty > 0 ? f(a.qty, 0) + ' ações' : 'risco acima do limite') + '</span>' +
+      (a.qty > 0 ? '<span>exposição R$ ' + f(a.expo, 0) + '</span>' : '') + '</div>' +
+      '<div class="line2"><span>vol. relativo ' + (a.rvol == null ? 'n/d' : f(a.rvol, 1) + '×') + '</span><span>ATR ' + f(a.atrPct) + '%</span>' +
+      '<span>fechou a ' + f(a.cp * 100, 0) + '% da faixa</span><span>pivô ' + f(a.pv) + '</span><span>R1 ' + f(a.R1) + '</span><span>S1 ' + f(a.S1) + '</span></div>' +
+      '</div></article>';
+  }
+  function scenHTML(label, cls, sc, extra) {
+    return '<div><h3><span class="pill ' + cls + '">' + label + '</span>' + (extra || '') + '</h3><dl class="kv">' +
+      '<dt>Gatilho</dt><dd>' + f(sc.e, 0) + '</dd>' +
+      '<dt>Stop</dt><dd class="stop">' + f(sc.s, 0) + ' (' + f(sc.sp, 0) + ' pts)</dd>' +
+      '<dt>Alvo 1</dt><dd class="tgt">' + f(sc.t1, 0) + ' (' + f(sc.t1p, 0) + ' pts)</dd>' +
+      '<dt>Alvo 2</dt><dd class="tgt">' + f(sc.t2, 0) + ' (' + f(sc.t2p, 0) + ' pts)</dd>' +
+      '<dt>Stop por contrato</dt><dd>R$ ' + f(sc.sp * 0.2) + '</dd>' +
+      '<dt>Alvo 1 por contrato</dt><dd>R$ ' + f(sc.t1p * 0.2) + '</dd>' +
+      '<dt>Contratos</dt><dd>' + (sc.n > 0 ? f(sc.n, 0) : 'abaixo de 1') + '</dd></dl></div>';
+  }
+  function winHTML(wa) {
+    var w = wa.w, items = [
+      { l: 'Máxima ant.', v: w.h }, { l: 'R2', v: wa.lv.R2 }, { l: 'R1', v: wa.lv.R1 }, { l: 'Pivô', v: wa.lv.P },
+      { l: 'S1', v: wa.lv.S1 }, { l: 'S2', v: wa.lv.S2 }, { l: 'Mínima ant.', v: w.l }, { l: 'Fechamento ant.', v: w.c, cur: true }
+    ].sort(function (a, b) { return b.v - a.v; });
+    var up = wa.bias === 'C';
+    return '<section class="stack"><div class="head-row"><h2 class="section-title">Mini índice ' + esc(S.win.contract || 'WIN') + '</h2>' +
+      '<span class="small muted">Base: ' + esc(wa.src) + ' · ATR ' + f(wa.A, 0) + ' pts · 1 ponto = R$ 0,20 por contrato</span></div>' +
+      '<div class="win"><div class="scen">' +
+      scenHTML('Compra', 'up', wa.buy, up ? '<span class="hint">viés do dia</span>' : '') +
+      scenHTML('Venda', 'down', wa.sell, up ? '' : '<span class="hint">viés do dia</span>') +
+      '</div><div><div class="small muted" style="margin-bottom:6px">Fechou ' + (up ? 'acima' : 'abaixo') + ' do pivô. Escada de níveis, em pontos:</div>' +
+      '<ul class="ladder">' + items.map(function (it) {
+        var dl = it.v - w.c;
+        return '<li' + (it.cur ? ' class="cur"' : '') + '><span>' + it.l + '</span><span class="mono">' + f(it.v, 0) + '</span><span class="d mono">' + (it.cur ? '' : (dl > 0 ? '+' : '') + f(dl, 0)) + '</span></li>';
+      }).join('') + '</ul></div></div></section>';
+  }
+
+  function planText(p) {
+    var out = ['MESA DO DIA · base: pregão de ' + sessionLabel(effSession())];
+    if (p.wa) {
+      var b = p.wa.buy, s = p.wa.sell;
+      out.push('', S.win.contract + ' | Compra ' + f(b.e, 0) + ' stop ' + f(b.s, 0) + ' alvos ' + f(b.t1, 0) + '/' + f(b.t2, 0) +
+        ' | Venda ' + f(s.e, 0) + ' stop ' + f(s.s, 0) + ' alvos ' + f(s.t1, 0) + '/' + f(s.t2, 0));
+    }
+    out.push('');
+    p.list.slice(0, 10).forEach(function (a, i) {
+      out.push((i + 1) + '. ' + a.t + ' ' + (a.side === 'C' ? 'COMPRA acima de ' : 'VENDA abaixo de ') + f(a.entry) +
+        ' | stop ' + f(a.stop) + ' | alvos ' + f(a.t1) + ' / ' + f(a.t2) + ' | nota ' + a.score);
+    });
+    return out.join('\n');
+  }
+
+  function renderPainel() {
+    var p = plan(), h = '';
+    h += '<div class="stack">';
+    h += '<div class="settings"><label class="f" for="capital">Capital (R$)<input type="text" inputmode="decimal" id="capital" data-bind="capital" value="' + esc(S.capital) + '"></label>' +
+      '<label class="f" for="risk">Risco por operação (%)<input type="text" inputmode="decimal" id="risk" data-bind="risk" value="' + esc(S.risk) + '"></label>' +
+      '<div class="small muted">' + (isFinite(p.cap) && isFinite(p.rk) ? 'Risco máximo de R$ ' + f(p.cap * p.rk / 100) + ' por operação' : 'Informe capital e risco para calcular as quantidades') + '</div></div>';
+    if (p.winErr) h += '<div class="banner">' + esc(p.winErr) + '</div>';
+    if (p.wa) h += winHTML(p.wa);
+    else if (S.mode === 'auto' && S.auto) h += '<div class="banner">O mini índice não veio nos dados automáticos. Digite os números dele na aba Dados.</div>';
+    h += '<section class="stack"><div class="head-row"><h2 class="section-title">Top 10 ações</h2><span class="small muted">' + p.total + ' analisadas · ordenadas por pontuação de 0 a 100</span></div>';
+    if (!p.list.length) {
+      h += '<p class="muted">Nenhuma ação para mostrar ainda.' + (S.mode === 'auto' ? '' : ' Cole os dados do último pregão na aba Dados.') + '</p>';
+      if (S.mode === 'auto' && runtime.load !== 'loading') h += '<div class="btns"><button class="btn ghost" data-act="sample">Ver exemplo com dados fictícios</button></div>';
+    } else {
+      h += '<div class="list">' + p.list.slice(0, 10).map(rowHTML).join('') + '</div>';
+    }
+    h += '</section>';
+    if (p.list.length) h += '<div class="btns"><button class="btn ghost" data-act="copy">Copiar plano do dia</button><span class="small muted" id="copystate" role="status"></span></div>';
+    h += '<p class="small muted">Cálculo mecânico sobre o pregão anterior. Não é recomendação de investimento. Gatilhos valem só se o ativo abrir perto do fechamento anterior; confirme preço, liquidez e notícias antes de operar.</p>';
+    h += '</div>';
+    return h;
+  }
+
+  function winFields() {
+    var w = S.win;
+    return '<div class="grid4">' +
+      [['winC', 'o', 'Abertura'], ['winH', 'h', 'Máxima'], ['winL', 'l', 'Mínima'], ['winCl', 'c', 'Fechamento'], ['winATR', 'atr', 'ATR 14 (pts)'], ['winK', 'contract', 'Contrato']].map(function (x) {
+        return '<label class="f" for="' + x[0] + '">' + x[2] + '<input type="text" inputmode="' + (x[1] === 'contract' ? 'text' : 'decimal') + '" id="' + x[0] + '" data-bind="win.' + x[1] + '" value="' + esc(w[x[1]]) + '"></label>';
+      }).join('') + '</div>';
+  }
+  function renderDados() {
+    var h = '<div class="stack">';
+    h += '<div class="seg" role="group" aria-label="Origem dos dados">' +
+      '<button data-act="mode" data-mode="auto" aria-pressed="' + (S.mode === 'auto') + '">Automático</button>' +
+      '<button data-act="mode" data-mode="manual" aria-pressed="' + (S.mode === 'manual') + '">Manual</button></div>';
+    if (S.mode === 'auto') {
+      if (S.auto) {
+        h += '<p class="small muted">Pregão de <b>' + sessionLabel(S.auto.session_date) + '</b> · ' + S.auto.stocks.length + ' ações com liquidez suficiente · gerado em ' + stamp(S.auto.updated_at) + '. O robô atualiza todo dia útil, por volta de 19h e 8h.</p>';
+      } else {
+        h += '<p class="small muted">Nenhum dado automático carregado ainda.</p>';
+      }
+      h += '<div class="btns"><button class="btn" data-act="refresh">Atualizar agora</button><span class="small muted" role="status" id="refstate"></span></div>';
+      h += '<h2 class="section-title">Mini índice</h2>' +
+        '<p class="small muted">A fonte gratuita traz o Ibovespa, não o contrato futuro. O app usa o Ibovespa e soma o ajuste abaixo. Para calcular o ajuste, subtraia o fechamento do Ibovespa do fechamento do WIN no último pregão (se o WIN fechou 1.000 pontos acima, digite 1000). Revise de vez em quando, pois a diferença muda ao longo do contrato.</p>' +
+        '<div class="settings"><label class="f" for="basis">Ajuste WIN − Ibovespa (pontos)<input type="text" inputmode="decimal" id="basis" data-bind="basis" value="' + esc(S.basis) + '"></label>' +
+        '<label class="f" for="winK0">Contrato<input type="text" id="winK0" data-bind="win.contract" value="' + esc(S.win.contract) + '"></label></div>' +
+        '<h2 class="section-title">Ou digite o WIN exato</h2>' +
+        '<p class="small muted">Se preencher abertura, máxima, mínima e fechamento do WIN, o app usa esses números e ignora o Ibovespa. Apague os campos para voltar ao automático.</p>' +
+        winFields() +
+        '<div class="btns"><button class="btn ghost" data-act="clearwin">Apagar números do WIN</button></div>';
+    } else {
+      h += '<ol class="steps"><li>No Profit, Tryd, MetaTrader ou na sua corretora, copie as colunas do último pregão.</li>' +
+        '<li>Cole abaixo, uma ação por linha: <code>ticker; abertura; máxima; mínima; fechamento; volume; volume médio 20d; ATR 14</code>. As duas últimas colunas são opcionais.</li>' +
+        '<li>Preencha o mini índice e toque em Analisar.</li></ol>';
+      h += '<label class="f" for="stocksText">Ações (separador ponto e vírgula, tab ou vírgula; decimal com vírgula ou ponto)<textarea id="stocksText" data-bind="stocksText" spellcheck="false">' + esc(S.stocksText) + '</textarea></label>';
+      h += '<h2 class="section-title">Mini índice</h2>' + winFields();
+      h += '<label class="f" for="sessDate" style="max-width:200px">Data do pregão<input type="date" id="sessDate" data-bind="sessDate" value="' + esc(S.sessDate) + '"></label>';
+      h += '<div class="btns"><button class="btn" data-act="analyze">Analisar</button><button class="btn ghost" data-act="sample">Carregar exemplo</button><button class="btn ghost" data-act="clear">Limpar tudo</button></div>';
+      if (S.errors && S.errors.length) h += '<ul class="err">' + S.errors.map(function (e) { return '<li>' + esc(e) + '</li>'; }).join('') + '</ul>';
+    }
+    h += '<p class="small muted">Capital, risco e ajustes ficam salvos só neste aparelho.</p></div>';
+    return h;
+  }
+
+  function paramRow(label, grp, key) {
+    return '<label class="f" for="p-' + grp + '-' + key + '">' + label + '<input type="text" inputmode="decimal" id="p-' + grp + '-' + key + '" data-param="' + grp + '.' + key + '" value="' + String(S.p[grp][key]).replace('.', ',') + '"></label>';
+  }
+  function renderMetodo() {
+    return '<div class="stack">' +
+      '<h2 class="section-title">Como o painel decide</h2>' +
+      '<p>Cada ação recebe uma nota de 0 a 100 a partir do pregão anterior. Quanto maior a nota, mais a ação reúne o que o day trade pede: liquidez, movimento suficiente e direção definida. O robô já descarta ações com volume médio abaixo de R$ 20 milhões por dia.</p>' +
+      '<div class="scroll"><table><thead><tr><th>Critério</th><th>Peso</th><th>Como pontua</th></tr></thead><tbody>' +
+      '<tr><td>Volume relativo</td><td class="num">30</td><td>Volume do dia dividido pela média de 20 dias. Duas vezes a média ou mais leva a nota cheia.</td></tr>' +
+      '<tr><td>Volatilidade</td><td class="num">25</td><td>ATR em % do preço. Entre 1,5% e 4% leva a nota cheia; abaixo falta movimento, acima fica arriscado.</td></tr>' +
+      '<tr><td>Direção</td><td class="num">25</td><td>Quão perto da máxima ou da mínima o ativo fechou.</td></tr>' +
+      '<tr><td>Corpo do candle</td><td class="num">20</td><td>Corpo (abertura a fechamento) em relação à faixa do dia.</td></tr></tbody></table></div>' +
+      '<p><b>Compra ou venda:</b> se fechou na metade superior da faixa, o painel sugere compra; na inferior, venda. Se o candle contradiz essa leitura (por exemplo, fechou abaixo da abertura mas na metade superior), aparece "viés misto".</p>' +
+      '<p><b>Níveis:</b> com A igual ao ATR (ou à faixa do dia, se não informado), o gatilho fica a uma fração de A além do fechamento. Stop e alvos saem do gatilho, em múltiplos de A. Pivô = (máxima + mínima + fechamento) / 3; R1 = 2 × pivô − mínima; S1 = 2 × pivô − máxima; R2 e S2 somam e subtraem a faixa do dia. No mini índice os valores são arredondados de 5 em 5 pontos.</p>' +
+      '<p><b>Quantidade:</b> risco máximo (capital × risco %) dividido pela distância até o stop. No mini índice, cada ponto vale R$ 0,20 por contrato.</p>' +
+      '<h2 class="section-title">Parâmetros das ações (frações de A)</h2><div class="grid4">' +
+      paramRow('Gatilho', 's', 'ke') + paramRow('Stop', 's', 'ks') + paramRow('Alvo 1', 's', 'k1') + paramRow('Alvo 2', 's', 'k2') + '</div>' +
+      '<h2 class="section-title">Parâmetros do mini índice (frações de A)</h2><div class="grid4">' +
+      paramRow('Gatilho', 'w', 'ke') + paramRow('Stop', 'w', 'ks') + paramRow('Alvo 1', 'w', 'k1') + paramRow('Alvo 2', 'w', 'k2') + '</div>' +
+      '<p class="small muted">Use esses valores como ponto de partida e ajuste ao seu estilo. Teste com poucas operações antes de aumentar o tamanho. Isto não é recomendação de investimento.</p></div>';
+  }
+
+  function render() {
+    ['painel', 'dados', 'metodo'].forEach(function (t) {
+      document.getElementById('t-' + t).setAttribute('aria-selected', S.tab === t ? 'true' : 'false');
+    });
+    renderMeta(); renderBanner();
+    var v = document.getElementById('view');
+    v.innerHTML = S.tab === 'dados' ? renderDados() : S.tab === 'metodo' ? renderMetodo() : renderPainel();
+  }
+
+  function setPath(path, val) {
+    var parts = path.split('.');
+    if (parts.length === 2) S[parts[0]][parts[1]] = val; else S[parts[0]] = val;
+  }
+
+  document.addEventListener('input', function (e) {
+    var t = e.target;
+    if (t.dataset && t.dataset.bind && S.tab === 'dados') {
+      setPath(t.dataset.bind, t.value);
+      if (S.mode === 'manual') S.isSample = false;
+      save();
+    }
+  });
+  document.addEventListener('change', function (e) {
+    var t = e.target;
+    if (t.dataset && t.dataset.bind) {
+      setPath(t.dataset.bind, t.value);
+      save();
+      render();
+    } else if (t.dataset && t.dataset.param) {
+      var kk = t.dataset.param.split('.'), v = num(t.value);
+      if (isFinite(v) && v > 0) { S.p[kk[0]][kk[1]] = v; save(); }
+      render();
+    }
+  });
+  document.addEventListener('click', function (e) {
+    var b = e.target.closest('[data-act]');
+    if (!b) return;
+    var act = b.dataset.act;
+    if (act === 'tab') { S.tab = b.dataset.tab; save(); render(); }
+    else if (act === 'mode') { S.mode = b.dataset.mode; S.isSample = false; S.errors = []; save(); render(); }
+    else if (act === 'refresh') { loadAuto(); }
+    else if (act === 'clearwin') { S.win.o = S.win.h = S.win.l = S.win.c = S.win.atr = ''; save(); render(); }
+    else if (act === 'analyze') {
+      var pr = parseStocks(S.stocksText), w = readWin(), errs = pr.errors.slice();
+      if (w.error) errs.push(w.error);
+      if (!pr.rows.length && !w.o) errs.push('Nenhum dado válido para analisar.');
+      S.errors = errs; S.isSample = false;
+      S.tab = (pr.rows.length || w.o) && !errs.length ? 'painel' : 'dados';
+      if (S.tab === 'dados' && (pr.rows.length || w.o)) errs.push('Corrija as linhas acima e toque em Analisar de novo. As linhas válidas já aparecem no painel.');
+      save(); render();
+    } else if (act === 'sample') {
+      S.mode = 'manual'; S.stocksText = SAMPLE;
+      S.win.o = '139850'; S.win.h = '140420'; S.win.l = '138960'; S.win.c = '139130'; S.win.atr = '1650';
+      S.sessDate = iso(prevBiz(new Date())); S.isSample = true; S.errors = []; S.tab = 'painel'; save(); render();
+    } else if (act === 'clear') {
+      S.stocksText = ''; S.win.o = S.win.h = S.win.l = S.win.c = S.win.atr = ''; S.isSample = false; S.errors = []; save(); render();
+    } else if (act === 'copy') {
+      var txt = planText(plan()), st = document.getElementById('copystate');
+      try {
+        navigator.clipboard.writeText(txt).then(function () { st.textContent = 'Plano copiado.'; }, function () { st.textContent = 'Não foi possível copiar neste navegador.'; });
+      } catch (err) { st.textContent = 'Não foi possível copiar neste navegador.'; }
+    }
+  });
+
+  render();
+  loadAuto();
+  document.addEventListener('visibilitychange', function () {
+    if (!document.hidden && S.mode === 'auto') loadAuto();
+  });
+})();
+</script>
+</body>
+</html>

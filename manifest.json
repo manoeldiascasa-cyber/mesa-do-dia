@@ -1,0 +1,13 @@
+{
+  "name": "Mesa do Dia",
+  "short_name": "Mesa do Dia",
+  "description": "Top 10 ações e mini índice para day trade na B3",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#ECEFF1",
+  "theme_color": "#0B5F73",
+  "icons": [
+    { "src": "icon.png", "sizes": "512x512", "type": "image/png", "purpose": "any" }
+  ]
+}
