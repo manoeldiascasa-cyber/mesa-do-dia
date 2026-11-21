@@ -1,0 +1,32 @@
+name: Atualizar dados do pregão
+
+on:
+  schedule:
+    - cron: "0 22 * * 1-5"   # 19h em Brasília, depois do fechamento
+    - cron: "0 11 * * 1-5"   # 8h em Brasília, reforço antes da abertura
+  workflow_dispatch:         # permite rodar na mão pelo botão "Run workflow"
+
+permissions:
+  contents: write
+
+jobs:
+  atualizar:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Baixar o repositório
+        uses: actions/checkout@v4
+
+      - name: Buscar dados do pregão
+        run: python3 atualizar_dados.py
+
+      - name: Salvar data.json
+        run: |
+          git config user.name "robo-mesa-do-dia"
+          git config user.email "actions@users.noreply.github.com"
+          git add data.json
+          if git diff --cached --quiet; then
+            echo "Nada novo para salvar."
+          else
+            git commit -m "Atualiza dados do pregão"
+            git push
+          fi
