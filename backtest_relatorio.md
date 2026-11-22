@@ -1,6 +1,6 @@
 # Simulado da Mesa do Dia
 
-Período: 2024-11-19 a 2026-11-19 · 476 pregões · 68 ações · gerado em 2026-11-22T22:56:30Z
+Período: 2024-11-19 a 2026-11-19 · 476 pregões · 68 ações · gerado em 2026-11-22T23:11:15Z
 
 ## Top 10 ações (candles diários)
 

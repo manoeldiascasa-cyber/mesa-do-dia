@@ -1,5 +1,5 @@
 {
- "gerado_em": "2026-11-22T22:56:30Z",
+ "gerado_em": "2026-11-22T23:11:15Z",
  "periodo": [
   "2024-11-19",
   "2026-11-19"
@@ -4053,13 +4053,13 @@
     "retorno_medio_pct": 0.024
    },
    "todos": {
-    "n": 2961,
-    "alvo1_pct": 19.7,
+    "n": 2960,
+    "alvo1_pct": 19.6,
     "stop_pct": 25.7,
-    "fechamento_pct": 54.6,
+    "fechamento_pct": 54.7,
     "lucro_pct": 48.8,
     "R_medio": -0.016,
-    "R_mediano": -0.019,
+    "R_mediano": -0.021,
     "fator_lucro": 0.95,
     "retorno_medio_pct": 0.016
    },
@@ -4069,10 +4069,10 @@
     "stop_pct": 21.2,
     "fechamento_pct": 62.1,
     "lucro_pct": 50.6,
-    "R_medio": 0.022,
+    "R_medio": 0.023,
     "R_mediano": 0.0,
     "fator_lucro": 1.07,
-    "retorno_medio_pct": 0.179
+    "retorno_medio_pct": 0.18
    },
    "topo10_compra": {
     "n": 232,
