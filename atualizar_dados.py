@@ -42,22 +42,22 @@ TZ_BR = ZoneInfo("America/Sao_Paulo")
 
 
 # --------------------------------------------------------------------- download
-def http_json(url, tentativas=4):
+def http_json(url, tentativas=2):
     ultimo = None
     for i in range(tentativas):
         req = urllib.request.Request(url, headers={"User-Agent": UA, "Accept": "application/json"})
         try:
-            with urllib.request.urlopen(req, timeout=20) as r:
+            with urllib.request.urlopen(req, timeout=15) as r:
                 return json.load(r)
         except urllib.error.HTTPError as e:
-            ultimo = e
+            ultimo = f"HTTP {e.code}"
             if e.code == 404:
                 return None
-            time.sleep(2 * (i + 1))
+            time.sleep(1.5)
         except Exception as e:  # rede, JSON inválido etc.
-            ultimo = e
-            time.sleep(2 * (i + 1))
-    raise RuntimeError(f"falha ao baixar: {ultimo}")
+            ultimo = f"{type(e).__name__}: {e}"
+            time.sleep(1.5)
+    raise RuntimeError(f"falha ao baixar ({ultimo})")
 
 
 def baixar_candles(simbolo):
@@ -94,12 +94,67 @@ def baixar_candles(simbolo):
             continue
         d = (datetime.fromtimestamp(t, timezone.utc) + timedelta(seconds=desloc)).date().isoformat()
         por_data[d] = {"d": d, "o": o, "h": h, "l": l, "c": c, "v": v}
-    candles = [por_data[d] for d in sorted(por_data)]
-    # Descarta o candle de hoje enquanto o pregão ainda não terminou.
+    return sem_candle_incompleto([por_data[d] for d in sorted(por_data)])
+
+
+def sem_candle_incompleto(candles):
+    """Descarta o candle de hoje enquanto o pregão ainda não terminou."""
     agora = datetime.now(TZ_BR)
     if candles and candles[-1]["d"] == agora.date().isoformat() and (agora.hour, agora.minute) < (18, 20):
         candles.pop()
     return candles
+
+
+def baixar_candles_yf(simbolo):
+    """Segundo método: biblioteca yfinance (instalada na hora, se preciso)."""
+    try:
+        import yfinance as yf
+    except ImportError:
+        import subprocess
+        subprocess.run([sys.executable, "-m", "pip", "install", "-q", "--break-system-packages", "yfinance"], check=True)
+        import yfinance as yf
+    df = yf.Ticker(simbolo).history(period="4mo", interval="1d", auto_adjust=False, actions=False)
+    candles = []
+    for idx, linha in df.iterrows():
+        o, h, l, c = linha["Open"], linha["High"], linha["Low"], linha["Close"]
+        if any(x != x for x in (o, h, l, c)):  # NaN
+            continue
+        candles.append({"d": idx.date().isoformat(), "o": float(o), "h": float(h), "l": float(l),
+                        "c": float(c), "v": float(linha["Volume"] or 0)})
+    return sem_candle_incompleto(candles)
+
+
+class Fonte:
+    """Tenta o método direto; se o Yahoo recusar, passa para o yfinance."""
+
+    def __init__(self):
+        self.metodo = "direto"
+        self.falhas = 0
+        self.sucessos = 0
+        self.erros = []
+
+    def baixar(self, simbolo):
+        if self.metodo == "direto":
+            try:
+                r = baixar_candles(simbolo)
+                self.sucessos += 1
+                return r
+            except RuntimeError as e:
+                self.falhas += 1
+                self.erros.append(f"direto {simbolo}: {e}")
+                if self.sucessos == 0 and self.falhas >= 3:
+                    print("Método direto recusado; trocando para yfinance.", file=sys.stderr)
+                    self.metodo = "yfinance"
+                else:
+                    raise
+        try:
+            r = baixar_candles_yf(simbolo)
+            if r:
+                self.sucessos += 1
+            return r
+        except Exception as e:
+            self.erros.append(f"yfinance {simbolo}: {type(e).__name__}: {e}")
+            raise
 
 
 # ----------------------------------------------------------------------- cálculo
@@ -135,13 +190,22 @@ def sem_hora(d):
 
 
 # -------------------------------------------------------------------------- main
-def main(baixar=baixar_candles, pausa=0.4):
-    ok, pulados = {}, []
+def main(baixar=None, pausa=0.4):
+    fonte = Fonte()
+    baixar = baixar or fonte.baixar
+    ok, pulados, seguidas = {}, [], 0
     for t in TICKERS:
         try:
             cs = baixar(t + ".SA")
+            seguidas = 0
         except Exception as e:
             pulados.append(f"{t}: {e}")
+            seguidas += 1
+            if not ok and seguidas >= 8:
+                print("Nenhuma ação baixada nas 8 primeiras tentativas. Parando.", file=sys.stderr)
+                for linha in fonte.erros[:12]:
+                    print("  -", linha, file=sys.stderr)
+                return 1
             continue
         if len(cs) < 15:
             pulados.append(f"{t}: poucos dados")
