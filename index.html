@@ -181,9 +181,16 @@ ol.steps { margin: 0; padding-left: 20px; display: flex; flex-direction: column;
 
   function pad(n) { return String(n).padStart(2, '0'); }
   function iso(d) { return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()); }
+  // Dias sem pregão na B3 (feriados e Carnaval, Sexta-feira Santa e Corpus Christi). Inclua os de 2028 em diante quando chegar a hora.
+  var HOLIDAYS = [
+    '2026-01-01', '2026-02-16', '2026-02-17', '2026-04-03', '2026-04-21', '2026-05-01', '2026-06-04', '2026-09-07',
+    '2026-10-12', '2026-11-02', '2026-11-20', '2026-12-24', '2026-12-25', '2026-12-31',
+    '2027-01-01', '2027-02-08', '2027-02-09', '2027-03-26', '2027-04-21', '2027-05-27', '2027-09-07',
+    '2027-10-12', '2027-11-02', '2027-11-15', '2027-12-24', '2027-12-31'
+  ];
   function prevBiz(from) {
     var d = new Date(from.getTime());
-    do { d.setDate(d.getDate() - 1); } while (d.getDay() === 0 || d.getDay() === 6);
+    do { d.setDate(d.getDate() - 1); } while (d.getDay() === 0 || d.getDay() === 6 || HOLIDAYS.indexOf(iso(d)) !== -1);
     return d;
   }
   function autoContract() {
@@ -379,7 +386,7 @@ ol.steps { margin: 0; padding-left: 20px; display: flex; flex-direction: column;
     var es = effSession();
     var stale = es < iso(prevBiz(new Date()));
     document.getElementById('meta').innerHTML = 'Hoje <b>' + today + '</b><br>Base: pregão de <b>' + sessionLabel(es) + '</b>' +
-      (stale ? '<br><span class="hint">Pregão mais recente que isso pode existir</span>' : '') +
+      (stale ? '<br><span class="hint">Dados possivelmente desatualizados</span>' : '') +
       (S.mode === 'auto' ? '<br><button class="btn ghost small" data-act="refresh">Atualizar agora</button>' : '');
   }
   function renderBanner() {
