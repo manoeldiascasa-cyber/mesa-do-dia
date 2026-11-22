@@ -417,7 +417,74 @@ def relatorio(s):
     return "\n".join(L) + "\n"
 
 
+def exportar_dados(baixar=baixar_yf, pausa=0.4, log=print, pasta=None):
+    """Guarda os dados brutos (diário de 5 anos e 5 min de 60 dias) para pesquisa de filtros."""
+    import csv
+    import gzip
+    pasta = pasta or (PASTA / "dados")
+    pasta.mkdir(exist_ok=True)
+    simbolos = ["^BVSP"] + [t + ".SA" for t in ad.TICKERS]
+    hoje = datetime.now(ad.TZ_BR)
+    n_d = n_5 = 0
+    with gzip.open(pasta / "diario.csv.gz", "wt", newline="", encoding="utf-8") as f:
+        w = csv.writer(f)
+        w.writerow(["ticker", "data", "o", "h", "l", "c", "v"])
+        for s in simbolos:
+            try:
+                cs = sem_hoje_incompleto(baixar(s, "5y", "1d"))
+            except Exception as e:  # noqa: BLE001
+                log(f"diário {s}: {e}")
+                continue
+            for c in cs:
+                w.writerow([s.replace(".SA", ""), c["d"], round(c["o"], 2), round(c["h"], 2), round(c["l"], 2),
+                            round(c["c"], 2), int(c["v"])])
+                n_d += 1
+            time.sleep(pausa)
+    with gzip.open(pasta / "intraday5.csv.gz", "wt", newline="", encoding="utf-8") as f:
+        w = csv.writer(f)
+        w.writerow(["ticker", "data", "hora", "o", "h", "l", "c", "v"])
+        for s in simbolos:
+            try:
+                barras = baixar(s, "60d", "5m")
+            except Exception as e:  # noqa: BLE001
+                log(f"5min {s}: {e}")
+                continue
+            for b in barras:
+                if b["d"] == hoje.date().isoformat() and (hoje.hour, hoje.minute) < (18, 20):
+                    continue
+                w.writerow([s.replace(".SA", ""), b["d"], f"{b['hm'][0]:02d}:{b['hm'][1]:02d}", round(b["o"], 2),
+                            round(b["h"], 2), round(b["l"], 2), round(b["c"], 2), int(b["v"])])
+                n_5 += 1
+            time.sleep(pausa)
+    log(f"Dados brutos salvos: {n_d} candles diários, {n_5} candles de 5 min.")
+    return n_d, n_5
+
+
+def salvar_dados_no_git(log=print):
+    """No GitHub Actions, grava a pasta dados/ no repositório."""
+    import os
+    import subprocess
+    if os.environ.get("GITHUB_ACTIONS") != "true":
+        return
+    try:
+        subprocess.run(["git", "config", "user.name", "robo-mesa-do-dia"], check=True)
+        subprocess.run(["git", "config", "user.email", "actions@users.noreply.github.com"], check=True)
+        subprocess.run(["git", "add", "dados"], check=True)
+        if subprocess.run(["git", "diff", "--cached", "--quiet"]).returncode != 0:
+            subprocess.run(["git", "commit", "-m", "Dados brutos para pesquisa"], check=True)
+            subprocess.run(["git", "push"], check=True)
+            log("Dados brutos enviados ao repositório.")
+    except Exception as e:  # noqa: BLE001
+        log("Não consegui salvar os dados brutos no repositório:", e)
+
+
 def main():
+    try:
+        n_d, n_5 = exportar_dados()
+        if n_d:
+            salvar_dados_no_git()
+    except Exception as e:  # noqa: BLE001
+        print("Exportação dos dados brutos falhou:", e, file=sys.stderr)
     try:
         s = executar()
     except Exception as e:  # noqa: BLE001
