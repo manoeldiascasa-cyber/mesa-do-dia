@@ -105,14 +105,43 @@ def sem_candle_incompleto(candles):
     return candles
 
 
+_YF = {"mod": None, "erro": None}
+
+
+def obter_yfinance():
+    """Importa o yfinance; se não existir, instala uma vez e importa de novo."""
+    if _YF["mod"]:
+        return _YF["mod"]
+    if _YF["erro"]:
+        raise RuntimeError(_YF["erro"])
+    try:
+        import yfinance
+    except ImportError:
+        import importlib
+        import site
+        import subprocess
+        r = subprocess.run([sys.executable, "-m", "pip", "install", "-q", "--break-system-packages", "yfinance"],
+                           capture_output=True, text=True)
+        if r.returncode != 0:
+            _YF["erro"] = "pip não conseguiu instalar o yfinance: " + (r.stderr or r.stdout)[-300:]
+            raise RuntimeError(_YF["erro"])
+        try:  # pasta de pacotes do usuário pode não estar no caminho do Python ainda
+            site.addsitedir(site.getusersitepackages())
+        except Exception:
+            pass
+        importlib.invalidate_caches()
+        try:
+            import yfinance
+        except ImportError as e:
+            _YF["erro"] = f"yfinance instalado mas não importável: {e}"
+            raise RuntimeError(_YF["erro"])
+    _YF["mod"] = yfinance
+    return yfinance
+
+
 def baixar_candles_yf(simbolo):
     """Segundo método: biblioteca yfinance (instalada na hora, se preciso)."""
-    try:
-        import yfinance as yf
-    except ImportError:
-        import subprocess
-        subprocess.run([sys.executable, "-m", "pip", "install", "-q", "--break-system-packages", "yfinance"], check=True)
-        import yfinance as yf
+    yf = obter_yfinance()
     df = yf.Ticker(simbolo).history(period="4mo", interval="1d", auto_adjust=False, actions=False)
     candles = []
     for idx, linha in df.iterrows():
